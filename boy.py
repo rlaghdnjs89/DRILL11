@@ -75,6 +75,14 @@ class AutoRun:
     def do(boy):
         boy.frame = (boy.frame + 1) % 8
         boy.x += boy.dir * 15
+        if boy.x <= 50:
+            boy.x = 50
+            boy.dir = 1
+            boy.face_dir = 1
+        elif boy.x >= 800 - 50:
+            boy.x = 800 - 50
+            boy.dir = -1
+            boy.face_dir = -1
 
     @staticmethod
     def draw(boy):
