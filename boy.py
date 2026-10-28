@@ -3,6 +3,67 @@ from transitions import Machine
 import math
 
 
+class Idle:
+    @staticmethod
+    def enter(boy):
+        boy.wait_start_time = get_time()
+
+    @staticmethod
+    def do(boy):
+        boy.frame = (boy.frame + 1) % 8
+        if get_time() - boy.wait_start_time > 5.0:
+            boy.time_out()
+
+    @staticmethod
+    def draw(boy):
+        if boy.face_dir == 1:
+            boy.image.clip_draw(boy.frame * 100, 300, 100, 100, boy.x, boy.y)
+        else:
+            boy.image.clip_draw(boy.frame * 100, 200, 100, 100, boy.x, boy.y)
+
+
+class Sleep:
+    @staticmethod
+    def enter(boy):
+        pass
+
+    @staticmethod
+    def do(boy):
+        boy.frame = (boy.frame + 1) % 8
+
+    @staticmethod
+    def draw(boy):
+        if boy.face_dir == 1:
+            boy.image.clip_composite_draw(
+                boy.frame * 100, 300, 100, 100,
+                math.pi / 2, '', boy.x - 25, boy.y - 25, 100, 100
+            )
+        else:
+            boy.image.clip_composite_draw(
+                boy.frame * 100, 200, 100, 100,
+                -math.pi / 2, '', boy.x + 25, boy.y - 25, 100, 100
+            )
+
+
+class Run:
+    @staticmethod
+    def enter(boy):
+        pass
+
+    @staticmethod
+    def do(boy):
+        boy.frame = (boy.frame + 1) % 8
+        boy.x += boy.dir * 5
+        boy.x = max(25, min(800 - 25, boy.x))
+
+    @staticmethod
+    def draw(boy):
+        if boy.face_dir == 1:
+            boy.image.clip_draw(boy.frame * 100, 100, 100, 100, boy.x, boy.y)
+        else:
+            boy.image.clip_draw(boy.frame * 100, 0, 100, 100, boy.x, boy.y)
+
+
 class Boy:
     def __init__(self):
         self.x, self.y = 400, 90
@@ -11,6 +72,12 @@ class Boy:
         self.face_dir = 1
         self.image = load_image('animation_sheet.png')
         self.wait_start_time = get_time()
+
+        self.state_classes = {
+            'IDLE': Idle,
+            'SLEEP': Sleep,
+            'RUN': Run,
+        }
 
         # IDLE, SLEEP, RUN 상태를 정의한다.
         self.machine = Machine(
@@ -43,7 +110,13 @@ class Boy:
         )
 
     def on_enter_IDLE(self):
-        self.wait_start_time = get_time()
+        Idle.enter(self)
+
+    def on_enter_SLEEP(self):
+        Sleep.enter(self)
+
+    def on_enter_RUN(self):
+        Run.enter(self)
 
     def handle_event(self, event):
         if event.type == SDL_KEYDOWN:
@@ -80,36 +153,7 @@ class Boy:
                 self.start_run()
 
     def update(self):
-        if self.state == 'IDLE':
-            self.frame = (self.frame + 1) % 8
-            if get_time() - self.wait_start_time > 5.0:
-                self.time_out()
-        elif self.state == 'SLEEP':
-            self.frame = (self.frame + 1) % 8
-        elif self.state == 'RUN':
-            self.frame = (self.frame + 1) % 8
-            self.x += self.dir * 5
-            self.x = max(25, min(800 - 25, self.x))
+        self.state_classes[self.state].do(self)
 
     def draw(self):
-        if self.state == 'IDLE':
-            if self.face_dir == 1:
-                self.image.clip_draw(self.frame * 100, 300, 100, 100, self.x, self.y)
-            else:
-                self.image.clip_draw(self.frame * 100, 200, 100, 100, self.x, self.y)
-        elif self.state == 'SLEEP':
-            if self.face_dir == 1:
-                self.image.clip_composite_draw(
-                    self.frame * 100, 300, 100, 100,
-                    math.pi / 2, '', self.x - 25, self.y - 25, 100, 100
-                )
-            else:
-                self.image.clip_composite_draw(
-                    self.frame * 100, 200, 100, 100,
-                    -math.pi / 2, '', self.x + 25, self.y - 25, 100, 100
-                )
-        elif self.state == 'RUN':
-            if self.face_dir == 1:
-                self.image.clip_draw(self.frame * 100, 100, 100, 100, self.x, self.y)
-            else:
-                self.image.clip_draw(self.frame * 100, 0, 100, 100, self.x, self.y)
+        self.state_classes[self.state].draw(self)
