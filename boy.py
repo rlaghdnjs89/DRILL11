@@ -152,6 +152,11 @@ class Boy:
             source='AUTORUN',
             dest='IDLE',
         )
+        self.machine.add_transition(
+            trigger='start_run',
+            source='AUTORUN',
+            dest='RUN',
+        )
 
     def on_enter_IDLE(self):
         Idle.enter(self)
@@ -168,8 +173,18 @@ class Boy:
     def handle_event(self, event):
         if event.type == SDL_KEYDOWN:
             if event.key == SDLK_RIGHT:
+                if self.state == 'AUTORUN':
+                    self.dir = 1
+                    self.face_dir = 1
+                    self.start_run()
+                    return
                 self.dir += 1
             elif event.key == SDLK_LEFT:
+                if self.state == 'AUTORUN':
+                    self.dir = -1
+                    self.face_dir = -1
+                    self.start_run()
+                    return
                 self.dir -= 1
             elif event.key == SDLK_a:
                 if self.state == 'IDLE':
@@ -189,19 +204,22 @@ class Boy:
                     self.face_dir = self.dir
 
         elif event.type == SDL_KEYUP:
-            if event.key == SDLK_RIGHT:
-                self.dir -= 1
-            elif event.key == SDLK_LEFT:
-                self.dir += 1
+            if event.key in (SDLK_RIGHT, SDLK_LEFT):
+                if self.state == 'AUTORUN':
+                    return
+                if event.key == SDLK_RIGHT:
+                    self.dir -= 1
+                elif event.key == SDLK_LEFT:
+                    self.dir += 1
 
-            if self.state == 'RUN':
-                if self.dir == 0:
-                    self.stop_run()
-                else:
+                if self.state == 'RUN':
+                    if self.dir == 0:
+                        self.stop_run()
+                    else:
+                        self.face_dir = self.dir
+                elif self.state == 'IDLE' and self.dir != 0:
                     self.face_dir = self.dir
-            elif self.state == 'IDLE' and self.dir != 0:
-                self.face_dir = self.dir
-                self.start_run()
+                    self.start_run()
 
     def update(self):
         self.state_classes[self.state].do(self)
