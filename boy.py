@@ -84,6 +84,10 @@ class AutoRun:
             boy.dir = -1
             boy.face_dir = -1
 
+        if get_time() - boy.autorun_start_time > 5.0:
+            boy.dir = 0
+            boy.time_out()
+
     @staticmethod
     def draw(boy):
         if boy.face_dir == 1:
@@ -142,6 +146,11 @@ class Boy:
             trigger='start_autorun',
             source='IDLE',
             dest='AUTORUN',
+        )
+        self.machine.add_transition(
+            trigger='time_out',
+            source='AUTORUN',
+            dest='IDLE',
         )
 
     def on_enter_IDLE(self):
