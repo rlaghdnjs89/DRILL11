@@ -1,4 +1,4 @@
-from pico2d import load_image, get_time, SDL_KEYDOWN, SDL_KEYUP, SDLK_LEFT, SDLK_RIGHT
+from pico2d import load_image, get_time, SDL_KEYDOWN, SDL_KEYUP, SDLK_LEFT, SDLK_RIGHT, SDLK_a
 from transitions import Machine
 import math
 
@@ -64,6 +64,26 @@ class Run:
             boy.image.clip_draw(boy.frame * 100, 0, 100, 100, boy.x, boy.y)
 
 
+class AutoRun:
+    @staticmethod
+    def enter(boy):
+        boy.autorun_start_time = get_time()
+        if boy.dir == 0:
+            boy.dir = boy.face_dir
+
+    @staticmethod
+    def do(boy):
+        boy.frame = (boy.frame + 1) % 8
+        boy.x += boy.dir * 5
+
+    @staticmethod
+    def draw(boy):
+        if boy.face_dir == 1:
+            boy.image.clip_draw(boy.frame * 100, 100, 100, 100, boy.x, boy.y)
+        else:
+            boy.image.clip_draw(boy.frame * 100, 0, 100, 100, boy.x, boy.y)
+
+
 class Boy:
     def __init__(self):
         self.x, self.y = 400, 90
@@ -72,17 +92,19 @@ class Boy:
         self.face_dir = 1
         self.image = load_image('animation_sheet.png')
         self.wait_start_time = get_time()
+        self.autorun_start_time = 0.0
 
         self.state_classes = {
             'IDLE': Idle,
             'SLEEP': Sleep,
             'RUN': Run,
+            'AUTORUN': AutoRun,
         }
 
-        # IDLE, SLEEP, RUN 상태를 정의한다.
+        # IDLE, SLEEP, RUN, AUTORUN 상태를 정의한다.
         self.machine = Machine(
             model=self,
-            states=['IDLE', 'SLEEP', 'RUN'],
+            states=['IDLE', 'SLEEP', 'RUN', 'AUTORUN'],
             initial='IDLE',
             auto_transitions=False,
         )
@@ -108,6 +130,11 @@ class Boy:
             source='RUN',
             dest='IDLE',
         )
+        self.machine.add_transition(
+            trigger='start_autorun',
+            source='IDLE',
+            dest='AUTORUN',
+        )
 
     def on_enter_IDLE(self):
         Idle.enter(self)
@@ -118,12 +145,19 @@ class Boy:
     def on_enter_RUN(self):
         Run.enter(self)
 
+    def on_enter_AUTORUN(self):
+        AutoRun.enter(self)
+
     def handle_event(self, event):
         if event.type == SDL_KEYDOWN:
             if event.key == SDLK_RIGHT:
                 self.dir += 1
             elif event.key == SDLK_LEFT:
                 self.dir -= 1
+            elif event.key == SDLK_a:
+                if self.state == 'IDLE':
+                    self.start_autorun()
+                    return
 
             if self.state == 'SLEEP':
                 self.key_down()
